@@ -11,7 +11,7 @@ class Recipe {
   final int cookTimeMinutes;
   final int prepTimeMinutes;
   final int servings;
-  final String difficulty; // 'easy', 'medium', 'hard'
+  final String difficulty;
   final List<Ingredient> ingredients;
   final List<String> instructions;
   final List<String> tags;
@@ -20,7 +20,8 @@ class Recipe {
   final int reviewCount;
   final String category;
   final DateTime createdAt;
-  
+  bool isFavorite; // <-- Added mutable field
+
   Recipe({
     required this.id,
     required this.title,
@@ -39,25 +40,20 @@ class Recipe {
     this.reviewCount = 0,
     required this.category,
     required this.createdAt,
+    this.isFavorite = false, // <-- Default false
   });
-  
-  // Helper methods
+
   int get totalTimeMinutes => cookTimeMinutes + prepTimeMinutes;
-  
   bool get isQuickMeal => totalTimeMinutes <= 30;
-  
   bool get isVegetarian => tags.contains('vegetarian');
-  
   bool get isVegan => tags.contains('vegan');
-  
   bool get isGlutenFree => tags.contains('gluten-free');
-  
-  // Method to scale ingredients for different serving sizes
+
   Recipe scaleForServings(int newServings) {
     final scaleFactor = newServings / servings;
-    final scaledIngredients = ingredients.map((ingredient) => 
+    final scaledIngredients = ingredients.map((ingredient) =>
       ingredient.scale(scaleFactor)).toList();
-    
+
     return Recipe(
       id: id,
       title: title,
@@ -76,8 +72,7 @@ class Recipe {
       reviewCount: reviewCount,
       category: category,
       createdAt: createdAt,
+      isFavorite: isFavorite,
     );
   }
 }
-
-

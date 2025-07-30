@@ -2,17 +2,51 @@ import 'package:flutter/material.dart';
 import 'package:recipe_book_app/models/recipe.dart';
 import 'package:recipe_book_app/utils/responsive_breakpoints.dart';
 
-class RecipeDetailScreen extends StatelessWidget {
+class RecipeDetailScreen extends StatefulWidget {
   final Recipe recipe;
 
   const RecipeDetailScreen({Key? key, required this.recipe}) : super(key: key);
+
+  @override
+  State<RecipeDetailScreen> createState() => _RecipeDetailScreenState();
+}
+
+class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
+  late Recipe recipe;
+
+  @override
+  void initState() {
+    super.initState();
+    recipe = widget.recipe;
+  }
+
+  void _toggleFavorite() {
+    setState(() {
+      recipe.isFavorite = !recipe.isFavorite;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final isMobile = ResponsiveBreakpoints.isMobile(context);
 
     return Scaffold(
-      appBar: AppBar(title: Text(recipe.title)),
+      appBar: AppBar(
+  title: Text(recipe.title),
+  actions: [
+    IconButton(
+      icon: Icon(
+        recipe.isFavorite ? Icons.favorite : Icons.favorite_border,
+        color: recipe.isFavorite ? Colors.red : null,
+      ),
+      onPressed: () {
+        recipe.isFavorite = !recipe.isFavorite;
+        (context as Element).markNeedsBuild(); // refresh the UI
+      },
+    ),
+  ],
+),
+
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(

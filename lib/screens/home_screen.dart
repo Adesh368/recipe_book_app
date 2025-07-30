@@ -1,11 +1,32 @@
-// screens/home_screen.dart
 import 'package:flutter/material.dart';
 import 'package:recipe_book_app/data/sample_recipes.dart';
 import 'package:recipe_book_app/utils/responsive_breakpoints.dart';
-import 'package:recipe_book_app/widgets/common/recipe/recipe_grid.dart';
+import 'package:recipe_book_app/utils/route_generator.dart';
+import 'package:recipe_book_app/models/recipe.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  bool _isSearching = false;
+  final TextEditingController _searchController = TextEditingController();
+  List<Recipe> _filteredRecipes = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _filteredRecipes = SampleData.featuredRecipes;
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -17,12 +38,36 @@ class HomeScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildHeroSection(context),
-            const SizedBox(height: 32),
-            _buildFeaturedRecipes(context),
-            const SizedBox(height: 32),
-            _buildQuickCategories(context),
-            const SizedBox(height: 32),
-            _buildRecentlyViewed(context),
+            if (_isSearching && _searchController.text.isNotEmpty) ...[
+              const SizedBox(height: 24),
+              Text(
+                'Search Results',
+                style: Theme.of(context)
+                    .textTheme
+                    .headlineSmall
+                    ?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              ..._filteredRecipes.map(
+                (recipe) => ListTile(
+                  leading: Image.network(recipe.imageUrl,
+                      width: 60, fit: BoxFit.cover),
+                  title: Text(recipe.title),
+                  onTap: () => Navigator.pushNamed(
+                    context,
+                    RouteGenerator.recipeDetail,
+                    arguments: recipe,
+                  ),
+                ),
+              ),
+            ] else ...[
+              const SizedBox(height: 32),
+              _buildFeaturedCarousel(context),
+              const SizedBox(height: 32),
+              _buildQuickCategories(context),
+              const SizedBox(height: 32),
+              _buildRecentlyViewed(context),
+            ],
           ],
         ),
       ),
@@ -31,15 +76,34 @@ class HomeScreen extends StatelessWidget {
 
   PreferredSizeWidget _buildAppBar(BuildContext context) {
     return AppBar(
-      title: const Text('Recipe Book'),
+      title: _isSearching
+          ? TextField(
+              controller: _searchController,
+              autofocus: true,
+              decoration: const InputDecoration(
+                hintText: 'Search recipes...',
+                border: InputBorder.none,
+              ),
+              onChanged: (value) {
+                setState(() {
+                  _filteredRecipes = SampleData.featuredRecipes
+                      .where((r) =>
+                          r.title.toLowerCase().contains(value.toLowerCase()))
+                      .toList();
+                });
+              },
+            )
+          : const Text('Recipe Book'),
       actions: [
         IconButton(
-          icon: const Icon(Icons.search),
+          icon: Icon(_isSearching ? Icons.close : Icons.search),
           onPressed: () => _showSearch(context),
         ),
         IconButton(
           icon: const Icon(Icons.shopping_cart_outlined),
-          onPressed: () => _navigateToShoppingList(context),
+          onPressed: () {
+            // Shopping list navigation
+          },
         ),
       ],
     );
@@ -47,22 +111,21 @@ class HomeScreen extends StatelessWidget {
 
   Widget _buildHeroSection(BuildContext context) {
     return Container(
-      height: ResponsiveBreakpoints.isMobile(context) ? 200 : 300,
+      height: ResponsiveBreakpoints.isMobile(context) ? 240 : 300,
+      width: double.infinity,
       decoration: BoxDecoration(
         gradient: LinearGradient(
+          colors: [Colors.orange[400]!, Colors.deepOrange[600]!],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Colors.orange[400]!, Colors.deepOrange[600]!],
         ),
         borderRadius: BorderRadius.circular(16),
       ),
-      child: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.max,
             children: [
               Text(
                 'Welcome to Recipe Book',
@@ -80,10 +143,10 @@ class HomeScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               ElevatedButton(
-                onPressed: () => _exploreRecipes(context),
+                onPressed: () => _exploreRecipes,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
-                  foregroundColor: Colors.orange[600],
+                  foregroundColor: Colors.orange[700],
                 ),
                 child: const Text('Explore Recipes'),
               ),
@@ -94,108 +157,8 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  // added recentlyviewed
-  Widget _buildRecentlyViewed(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Recently Viewed',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-        ),
-        const SizedBox(height: 16),
-        SizedBox(
-          height: 150,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: SampleData.recentlyViewed.length,
-            itemBuilder: (context, index) {
-              final recipe = SampleData.recentlyViewed[index];
-              return Padding(
-                padding: const EdgeInsets.only(right: 12.0),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    width: 120,
-                    color: Colors.orange[50],
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        ClipRRect(
-                          borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(12),
-                            topRight: Radius.circular(12),
-                          ),
-                          child: Image.network(
-                            recipe.imageUrl,
-                            height: 100, // Limit height to prevent overflow
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Text(
-                            recipe.title,
-                            style: Theme.of(context).textTheme.bodyMedium,
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  // added Categories
-  Widget _buildQuickCategories(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Quick Categories',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-        ),
-        const SizedBox(height: 16),
-        SizedBox(
-          height: 80,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            children: [
-              _buildCategoryChip('Breakfast'),
-              _buildCategoryChip('Lunch'),
-              _buildCategoryChip('Dinner'),
-              _buildCategoryChip('Dessert'),
-              _buildCategoryChip('Vegan'),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCategoryChip(String label) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 8.0),
-      child: Chip(
-        label: Text(label),
-        backgroundColor: Colors.orange[100],
-      ),
-    );
-  }
-
-  Widget _buildFeaturedRecipes(BuildContext context) {
+  Widget _buildFeaturedCarousel(BuildContext context) {
+    final recipes = SampleData.featuredRecipes;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -215,9 +178,172 @@ class HomeScreen extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 16),
-        ResponsiveRecipeGrid(
-          recipes: SampleData.featuredRecipes,
-          maxItems: ResponsiveBreakpoints.isMobile(context) ? 4 : 6,
+        SizedBox(
+          height: 220,
+          child: PageView.builder(
+            controller: PageController(viewportFraction: 0.85),
+            itemCount: recipes.length,
+            itemBuilder: (context, index) {
+              final recipe = recipes[index];
+              return Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: GestureDetector(
+                  onTap: () => Navigator.pushNamed(
+                    context,
+                    RouteGenerator.recipeDetail,
+                    arguments: recipe,
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Stack(
+                      children: [
+                        Positioned.fill(
+                          child: Image.network(
+                            recipe.imageUrl,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                        Positioned(
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Colors.transparent,
+                                  Colors.black.withOpacity(0.7),
+                                ],
+                              ),
+                            ),
+                            child: Text(
+                              recipe.title,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        )
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQuickCategories(BuildContext context) {
+    final categories = ['Breakfast', 'Lunch', 'Dinner', 'Dessert', 'Vegan'];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Quick Categories',
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+        ),
+        const SizedBox(height: 16),
+        Wrap(
+          spacing: 8,
+          children: categories.map((category) {
+            return ActionChip(
+              label: Text(category),
+              backgroundColor: Colors.orange[100],
+              onPressed: () {
+                final filtered = SampleData.featuredRecipes
+                    .where((r) =>
+                        r.category.toLowerCase() == category.toLowerCase())
+                    .toList();
+
+                Navigator.pushNamed(
+                  context,
+                  RouteGenerator.featuredRecipes,
+                  arguments: {
+                    'title': category,
+                    'recipes': filtered,
+                  },
+                );
+              },
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRecentlyViewed(BuildContext context) {
+    final recipes = SampleData.recentlyViewed;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Recently Viewed',
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          height: 150,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: recipes.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            itemBuilder: (context, index) {
+              final recipe = recipes[index];
+              return GestureDetector(
+                onTap: () => Navigator.pushNamed(
+                  context,
+                  RouteGenerator.recipeDetail,
+                  arguments: recipe,
+                ),
+                child: Container(
+                  width: 120,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    color: Colors.orange[50],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ClipRRect(
+                        borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(12)),
+                        child: Image.network(
+                          recipe.imageUrl,
+                          height: 100,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(
+                          recipe.title,
+                          style: Theme.of(context).textTheme.bodyMedium,
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
         ),
       ],
     );
@@ -226,6 +352,10 @@ class HomeScreen extends StatelessWidget {
   // Helper methods
   void _showSearch(BuildContext context) {
     // Implement search functionality
+    setState(() {
+      _isSearching = !_isSearching;
+      if (!_isSearching) _searchController.clear();
+    });
   }
 
   void _navigateToShoppingList(BuildContext context) {
@@ -233,10 +363,10 @@ class HomeScreen extends StatelessWidget {
   }
 
   void _exploreRecipes(BuildContext context) {
-    // Navigate to recipe list
+    Navigator.pushNamed(context, RouteGenerator.featuredRecipes);
   }
 
   void _viewAllRecipes(BuildContext context) {
-    // Navigate to all recipes
+    Navigator.pushNamed(context, RouteGenerator.featuredRecipes);
   }
 }

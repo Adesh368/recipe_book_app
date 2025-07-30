@@ -1,11 +1,10 @@
-// widgets/common/responsive_navigation.dart
 import 'package:flutter/material.dart';
 import 'package:recipe_book_app/screens/favorites_screen.dart';
 import 'package:recipe_book_app/screens/home_screen.dart';
 import 'package:recipe_book_app/screens/profile_screen.dart';
 import 'package:recipe_book_app/utils/responsive_breakpoints.dart';
 import 'package:recipe_book_app/screens/recipe_list_screen.dart';
-// import 'package:responsive_framework/responsive_framework.dart';
+import 'package:recipe_book_app/data/sample_recipes.dart';
 
 class ResponsiveNavigation extends StatefulWidget {
   const ResponsiveNavigation({super.key});
@@ -24,17 +23,17 @@ class _ResponsiveNavigationState extends State<ResponsiveNavigation> {
       selectedIcon: Icons.home,
       page: HomeScreen(),
     ),
-    const NavItem(
+    NavItem(
       label: 'Recipes',
       icon: Icons.restaurant_outlined,
       selectedIcon: Icons.restaurant,
-      page: RecipeListScreen(),
+      page: RecipesListScreen(recipes: SampleData.featuredRecipes),
     ),
-    const NavItem(
+    NavItem(
       label: 'Favorites',
       icon: Icons.favorite_outline,
       selectedIcon: Icons.favorite,
-      page: FavoritesScreen(),
+      page: FavoritesScreen(recipes: SampleData.featuredRecipes),
     ),
     const NavItem(
       label: 'Profile',
@@ -55,8 +54,10 @@ class _ResponsiveNavigationState extends State<ResponsiveNavigation> {
     }
   }
 
+  // ✅ Desktop layout with extended rail + drawer
   Widget _buildDesktopLayout() {
     return Scaffold(
+      drawer: _buildDrawer(),
       body: Row(
         children: [
           NavigationRail(
@@ -74,6 +75,7 @@ class _ResponsiveNavigationState extends State<ResponsiveNavigation> {
 
   Widget _buildTabletLayout() {
     return Scaffold(
+      drawer: _buildDrawer(),
       body: Row(
         children: [
           NavigationRail(
@@ -90,11 +92,57 @@ class _ResponsiveNavigationState extends State<ResponsiveNavigation> {
 
   Widget _buildMobileLayout() {
     return Scaffold(
+      appBar: AppBar(
+        title: Text(destinations[selectedIndex].label),
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu),
+            onPressed: () => Scaffold.of(context).openDrawer(),
+          ),
+        ),
+      ),
+      drawer: _buildDrawer(),
       body: destinations[selectedIndex].page,
       bottomNavigationBar: NavigationBar(
         selectedIndex: selectedIndex,
         onDestinationSelected: _onDestinationSelected,
         destinations: destinations.map(_buildBottomDestination).toList(),
+      ),
+    );
+  }
+
+  Drawer _buildDrawer() {
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          DrawerHeader(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Colors.orange[400]!, Colors.deepOrange[600]!],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            child: const Text(
+              'Recipe Book',
+              style: TextStyle(color: Colors.white, fontSize: 24),
+            ),
+          ),
+          ...destinations.asMap().entries.map((entry) {
+            int index = entry.key;
+            NavItem item = entry.value;
+            return ListTile(
+              leading: Icon(item.icon),
+              title: Text(item.label),
+              selected: selectedIndex == index,
+              onTap: () {
+                Navigator.pop(context);
+                _onDestinationSelected(index);
+              },
+            );
+          }),
+        ],
       ),
     );
   }
